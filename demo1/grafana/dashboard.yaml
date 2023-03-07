@@ -1,0 +1,13 @@
+# Configuration file version
+apiVersion: 1
+
+providers:
+- name: 'default'                               # required
+  orgId: 1                                      # default
+  folder: ''
+  folderUid: ''                                 # automatically generated if not specified
+  type: file                                    # default
+  disableDeletion: false
+  editable: true
+  options:
+    path: /etc/grafana/provisioning/dashboards/ # required when using the 'file' type

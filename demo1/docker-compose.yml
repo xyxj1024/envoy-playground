@@ -1,0 +1,135 @@
+services:
+  # Define a front-envoy service: https://www.envoyproxy.io/docs/envoy/latest/start/sandboxes/front_proxy
+  # Sitting on the edge of the envoymesh network, handle http/https calls to the services
+  front-envoy:
+    image: envoyproxy/envoy-alpine:v1.21-latest # https://hub.docker.com/r/envoyproxy/envoy-alpine
+    environment:
+    # The default uid and gid for the envoy user are 101.
+    # The uid and gid of this user can be set at runtime using the following environment variables:
+      - ENVOY_UID = 0
+      - ENVOY_GID = 0
+    volumes:
+    - "./front-envoy/envoy-config.yaml:/etc/envoy/envoy.yaml"
+    - "./logs/envoy:/logs/envoy"
+    networks:
+      envoymesh:
+        aliases:
+        - front_envoy
+    ports:
+    - "8080:80"
+    - "8443:8443"
+    - "9901:9901"
+
+  # Define service-a
+  service-a:
+    build: service-a/
+    networks:
+      envoymesh:
+        aliases:
+        - service_a
+    ports:
+    - "8081:8081"
+
+  # Define service-b
+  service-b:
+    build: service-b/
+    networks:
+      envoymesh:
+        aliases:
+        - service_b
+    ports:
+    - "8082:8082"
+
+  # Define service-c
+  service-c:
+    build: service-c/
+    networks:
+      envoymesh:
+        aliases:
+        - service_c
+    ports:
+    - "8083:8083"
+
+  # Define the envoy service for service-a
+  service-a-envoy:
+    image: envoyproxy/envoy-alpine:v1.21-latest
+    volumes:
+    - "./service-a/envoy-config.yaml:/etc/envoy/envoy.yaml"
+    - "./logs/envoy:/logs/envoy"
+    networks:
+      envoymesh:
+        aliases:
+        - service_a_envoy
+    ports:
+    - "8786:8786"
+    - "8788:8788"
+
+  # Define the envoy service for service-b
+  service-b-envoy:
+    image: envoyproxy/envoy-alpine:v1.21-latest
+    volumes:
+    - "./service-b/envoy-config.yaml:/etc/envoy/envoy.yaml"
+    - "./logs/envoy:/logs/envoy"
+    networks:
+      envoymesh:
+        aliases:
+        - service_b_envoy
+    ports:
+    - "8789:8789"
+
+  # Define the envoy service for service-c
+  service-c-envoy:
+    image: envoyproxy/envoy-alpine:v1.21-latest
+    volumes:
+    - "./service-c/envoy-config.yaml:/etc/envoy/envoy.yaml"
+    - "./logs/envoy:/logs/envoy"
+    networks:
+      envoymesh:
+        aliases:
+        - service_c_envoy
+    ports:
+    - "8790:8790"
+
+  # Envoy will push the metrics to StatsD exporter, added as a sidecar alongside our services
+  statsd_exporter:
+    image: prom/statsd-exporter:latest
+    networks:
+      envoymesh:
+        aliases:
+        - statsd_exporter
+    ports:
+    - "9125:9125"
+    - "9102:9102"
+
+  # Metrics will be translated from StatsD metrics to Prometheus metrics
+  prometheus:
+    image: prom/prometheus
+    volumes:
+    - "./prometheus/config.yaml:/etc/prometheus.yaml"
+    networks:
+      envoymesh:
+        aliases:
+        - prometheus
+    ports:
+    - "9090:9090"
+    command: "--config.file=/etc/prometheus.yaml"
+
+  # Visualize metrics using Grafana
+  grafana:
+    image: grafana/grafana
+    volumes:
+    - "./grafana/grafana.ini:/etc/grafana/grafana.ini"
+    - "./grafana/datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml"
+    - "./grafana/dashboard.yaml:/etc/grafana/provisioning/dashboards/dashboard.yaml"
+    - "./grafana/dashboard.json:/etc/grafana/provisioning/dashboards/dashboard.json"
+    networks:
+      envoymesh:
+        aliases:
+        - grafana
+    ports:
+    - "3000:3000"
+
+# Default bridge network where containers can only access each other by IP addresses.
+networks:
+  envoymesh:
+    driver: bridge
