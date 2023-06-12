@@ -1,0 +1,41 @@
+services:
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.server
+    networks:
+      - envoymesh
+    expose:
+      - "8123"
+    ports:
+      - "8123:5050"
+      
+  envoy:
+    build:
+      context: ./envoy
+      dockerfile: Dockerfile.envoy
+    volumes:
+      - ./envoy/envoy.yaml:/etc/envoy.yaml
+    networks:
+      - envoymesh
+    expose:
+      - "9000"
+      - "1337"
+    ports:
+      - "9000:9000"
+      - "1337:1337"
+
+  extauthz:
+    build:
+      context: ./auth
+      dockerfile: Dockerfile.auth
+    networks:
+      - envoymesh
+    expose:
+      - "4040"
+    ports:
+      - "4040:4040"
+
+networks:
+  envoymesh: {}

@@ -1,0 +1,22 @@
+{
+    "xds_servers": [
+      {
+        "server_uri": "xds.domain.com:18000",
+        "channel_creds": [
+          {
+            "type": "insecure"
+          }
+        ],
+        "server_features": ["xds_v3"]      
+      }
+    ],
+    "node": {
+      "id": "test-id",
+      "metadata": {
+        "R_GCP_PROJECT_NUMBER": "123456789"
+      },
+      "locality": {
+        "zone": "us-central1-a"
+      }
+    }
+}

@@ -1,0 +1,21 @@
+// See: https://protobuf.dev/programming-guides/proto3/
+
+syntax = "proto3";
+
+package hello;
+
+option go_package = "./";
+
+message HelloRequest {
+    string name = 1;
+}
+
+message HelloResponse {
+    string greeting = 1;
+    string errors = 2;
+}
+
+service HelloService {
+    rpc Hello(HelloRequest) returns (HelloResponse) {};
+    rpc HelloNoAuth(HelloRequest) returns (HelloResponse) {};
+}

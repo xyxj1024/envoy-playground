@@ -1,0 +1,50 @@
+# Stage: kernel
+FROM docker/for-desktop-kernel:5.15.49-13422a825f833d125942948cf8a8688cef721ead AS ksrc
+
+# Stage: OS
+FROM ubuntu:20.04 AS bpftrace
+
+# Stage: Envoy
+FROM envoyproxy/envoy:v1.25-latest
+
+## Kernel headers
+COPY --from=ksrc /kernel-dev.tar /
+RUN tar xf kernel-dev.tar && rm kernel-dev.tar
+
+## Use Alibaba Cloud mirror for ubuntu
+RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/' /etc/apt/sources.list
+
+## Install LLVM
+RUN apt-get update && \
+    apt-get upgrade && \
+    apt-get dist-upgrade && \
+    apt-get autoremove && \
+    apt-get clean && \
+    apt-get install -y zip wget lsb-release software-properties-common && \
+    wget https://apt.llvm.org/llvm.sh && \
+    chmod +x llvm.sh && \
+    ./llvm.sh 12
+ENV PATH "$PATH:/usr/lib/llvm-12/bin"
+
+## Install bpftrace
+RUN apt-get install -y bpftrace
+
+## Install bcc
+WORKDIR /root
+RUN apt-get install -y bison build-essential cmake flex git curl vim kmod libedit-dev \
+    libllvm12 llvm-12-dev libclang-12-dev zlib1g-dev libelf-dev libfl-dev python3-distutils python3-bpfcc
+RUN git clone https://github.com/iovisor/bcc.git && \
+    mkdir bcc/build && \
+    cd bcc/build && \
+    cmake -DENABLE_LLVM_SHARED=1 .. && \
+    make && \
+    make install && \
+    cmake -DPYTHON_CMD=python3 .. && \
+    cd src/python/ && \
+    make && \
+    make install && \
+    sed -i "s/self._syscall_prefixes\[0\]/self._syscall_prefixes\[1\]/g" /usr/lib/python3/dist-packages/bcc/__init__.py
+
+COPY trace-envoy-socket.bt /root
+COPY envoy-demo.yaml /etc/envoy/envoy-config.yaml
+RUN chmod go+r /etc/envoy/envoy-config.yaml
