@@ -1,14 +1,12 @@
 package logger
 
-import "envoy-demo4/pkg/logger"
-
-var log logger.Logger
+var log Logger
 
 func BootLogger(debug bool) {
 	log = newLogrusLogger(debug)
 }
 
-func Instance() logger.Logger {
+func Instance() Logger {
 	return log
 }
 
@@ -36,6 +34,6 @@ func Panicf(format string, args ...interface{}) {
 	log.Panicf(format, args...)
 }
 
-func WithFields(keyValues logger.Fields) logger.Logger {
+func WithFields(keyValues Fields) Logger {
 	return log.WithFields(keyValues)
 }

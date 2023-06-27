@@ -13,16 +13,17 @@ Repo description:
 
 ## Useful Links
 
-- [Docker Engine Documentation](https://docs.docker.com/config/labels-custom-metadata/)
+- [Envoy data plaine API's `envoy` package](https://pkg.go.dev/github.com/envoyproxy/go-control-plane/envoy)
+- [Docker engine documentation](https://docs.docker.com/config/labels-custom-metadata/)
 - [Container-level and service-level labels](https://docs.docker.com/compose/compose-file/compose-file-v3/)
-- Jordan Webb, "The container orchestrator landscape," August 23, 2022, [https://lwn.net/Articles/905164/](https://lwn.net/Articles/905164/).
-- [Open Source Projects Built on Envoy Proxy](https://www.envoyproxy.io/community.html)
-- [New Relic's Sidecar: Service Discovery for all Docker Environments](https://relistan.com/sidecar-service-discovery-for-all-docker-environments)
+- [Open source projects built on Envoy proxy](https://www.envoyproxy.io/community.html)
+- [Jordan Webb](https://jordemort.dev/), "[The container orchestrator landscape](https://lwn.net/Articles/905164/)," August 23, 2022.
+- Viktor Adam, "[Podlike](https://blog.viktoradam.net/2018/05/14/podlike/)," May 14, 2018.
+- Hechao Li, "[Linux Bridge - Part 1](https://hechao.li/2017/12/13/linux-bridge-part1/)," December 13, 2017.
+- Karl Matthias, "[Sidecar: Service Discovery for all Docker Environments](https://relistan.com/sidecar-service-discovery-for-all-docker-environments)," August 04, 2016.
 - [Lyft: Using Envoy as an Explicit `CONNECT` and Transparent Proxy to disrupt malicious traffic, 11/02/2022](https://eng.lyft.com/internet-egress-filtering-of-services-at-lyft-72e99e29a4d9)
 - [Cloudflare: How to build your own public key infrastructure, 06/24/2015](https://blog.cloudflare.com/how-to-build-your-own-public-key-infrastructure/)
 - [Cloudflare: Moving k8s communication to gRPC, 03/20/2021](https://blog.cloudflare.com/moving-k8s-communication-to-grpc/)
-- [Li Hechao on Linux Bridge Network](https://hechao.li/2017/12/13/linux-bridge-part1/)
-- [Viktor Adam's Podlike project](https://blog.viktoradam.net/2018/05/14/podlike/)
 
 ## Appendix: Some notes taken along the way
 
@@ -150,7 +151,7 @@ In a modern, cloud-based microservices architecture, services instances have dyn
 
 How do clients of a service (in the case of [client-side discovery](https://microservices.io/patterns/client-side-discovery.html)) and/or routers (in the case of [server-side discovery](https://microservices.io/patterns/server-side-discovery.html)) know about the available instances of a service? Implement a [service registry](https://microservices.io/patterns/service-registry.html) or service discovery registry, which is a database of services, their instances and their locations. Service instances are registered with the service registry on startup and deregistered on shutdown. Client of the service and/or routers query the service registry to find the available instances of a service.
 
-#### Container labels
+#### [Traefik](https://traefik.io/traefik/): The cloud native application proxy
 
 Labels of a Docker container can be accessed through the following structure:
 
@@ -178,7 +179,9 @@ type Container struct {
 
 which is defined in [this Go module](https://pkg.go.dev/github.com/docker/docker).
 
-When using Docker as a [provider](https://doc.traefik.io/traefik/providers/overview/), [Traefik](https://github.com/traefik/traefik) uses container labels to retrieve its [routing](https://doc.traefik.io/traefik/routing/providers/docker) configuration. By default, Traefik watches for container-level labels on a standalone Docker Engine. When using Docker compose, labels are specified by the directive `labels` from the "[services](https://docs.docker.com/compose/compose-file/compose-file-v3/#service-configuration-reference)" objects. While in Swarm Mode, Traefik uses labels found on services, not on individual containers. Therefore, if you use a compose file with Swarm Mode, labels should be defined in the [`deploy`](https://docs.docker.com/compose/compose-file/compose-file-v3/#labels-1) part of your service.
+Configuration discovery in [Traefik](https://github.com/traefik/traefik) is achieved through *Providers*. The providers are infrastructure components, whether orchestrators, container engines, cloud providers, or key-value stores. The idea is that Traefik queries the provider APIs in order to find relevant information about routing, and when Traefik detects a change, it dynamically updates the routes.
+
+When using Docker as a [provider](https://doc.traefik.io/traefik/providers/overview/), Traefik uses container labels to retrieve its [routing](https://doc.traefik.io/traefik/routing/providers/docker) configuration. By default, Traefik watches for container-level labels on a standalone Docker Engine. When using Docker compose, labels are specified by the directive `labels` from the "[services](https://docs.docker.com/compose/compose-file/compose-file-v3/#service-configuration-reference)" objects. While in Swarm Mode, Traefik uses labels found on services, not on individual containers. Therefore, if you use a compose file with Swarm Mode, labels should be defined in the [`deploy`](https://docs.docker.com/compose/compose-file/compose-file-v3/#labels-1) part of your service.
 
 #### [Registrator](https://gliderlabs.github.io/registrator/latest/): Service registry bridge for Docker
 
@@ -197,7 +200,7 @@ type Service strut {
 
 The fields `ID`, `Name`, `Tags`, and `Attrs` can be overridden by user-defined container metadata stored as environment variables or labels.
 
-#### [Sidecar: A dynamic service discovery platform](https://github.com/newrelic/sidecar)
+#### [Sidecar](https://github.com/newrelic/sidecar): A dynamic service discovery platform
 
 Sidecar works at the level of services and has the means of mapping containers to service endpoints. It has a lifecycle for services and it exchanges that information regularly with peers.
 

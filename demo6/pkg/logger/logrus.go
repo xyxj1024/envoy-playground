@@ -1,13 +1,8 @@
 package logger
 
 import (
-	// Standard library
 	"os"
 
-	// Logger interface
-	"envoy-demo4/pkg/logger"
-
-	// Third-party library
 	"github.com/sirupsen/logrus"
 )
 
@@ -54,7 +49,7 @@ func (l *logrusLogger) Panicf(format string, args ...interface{}) {
 	l.logger.Fatalf(format, args...)
 }
 
-func (l *logrusLogger) WithFields(fields logger.Fields) logger.Logger {
+func (l *logrusLogger) WithFields(fields Fields) Logger {
 	return &logrusLogEntry{
 		entry: l.logger.WithFields(convertToLogrusFields(fields)),
 	}
@@ -84,13 +79,13 @@ func (l *logrusLogEntry) Panicf(format string, args ...interface{}) {
 	l.entry.Fatalf(format, args...)
 }
 
-func (l *logrusLogEntry) WithFields(fields logger.Fields) logger.Logger {
+func (l *logrusLogEntry) WithFields(fields Fields) Logger {
 	return &logrusLogEntry{
 		entry: l.entry.WithFields(convertToLogrusFields(fields)),
 	}
 }
 
-func convertToLogrusFields(fields logger.Fields) logrus.Fields {
+func convertToLogrusFields(fields Fields) logrus.Fields {
 	logrusFields := logrus.Fields{}
 	for index, val := range fields {
 		logrusFields[index] = val
