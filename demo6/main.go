@@ -73,8 +73,8 @@ func main() {
 		DeltaResponses: 0,
 	}
 	config := cache.NewSnapshotCache(
-		false,                 // disable the ADS flag
-		snapshot.StaticHash{}, // use the constant node hash
+		true, // enable the ADS flag
+		cache.IDHash{},
 		logger.Instance().WithFields(logger.Fields{"area": "snapshot-cache"}),
 	)
 	srv := server.NewServer(mainctx, config, cb)
@@ -170,8 +170,8 @@ func setupTLS() (sdsProvider xds.SDS) {
 /* Function generateWatcher:
  * creates a new watcher for Docker events and an initial update channel.
  */
-func generateWatcher(ctx context.Context) chan string {
-	updateChannel := make(chan string)
+func generateWatcher(ctx context.Context) chan snapshot.UpdateReason {
+	updateChannel := make(chan snapshot.UpdateReason)
 	log := logger.Instance().WithFields(logger.Fields{"area": "docker-events-watcher"})
 
 	go watcher.NewSwarmEvent(log).StartWatcher(ctx, updateChannel)

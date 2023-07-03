@@ -30,14 +30,14 @@ func NewADSProvider(ingressNetwork string, builder *ListenerProvider, log logger
 	}
 }
 
-func (s *ADSProvider) Provide(ctx context.Context) (clusters, listeners []types.Resource, err error) {
+func (s *ADSProvider) Provide(ctx context.Context, listenerPort uint32) (clusters, listeners []types.Resource, err error) {
 	clusters, vhosts, err := s.provideClustersAndVhosts(ctx)
 	if err != nil {
 		s.logger.Errorf("Failed creating clusters and virtual host configurations")
 		return nil, nil, err
 	}
 
-	listeners, err = s.listenerBuilder.ProvideListeners(vhosts)
+	listeners, err = s.listenerBuilder.ProvideListeners(vhosts, listenerPort)
 	if err != nil {
 		s.logger.Errorf("Failed converting virtual hosts into a listener configuration")
 		return nil, nil, err
@@ -64,24 +64,24 @@ func (s *ADSProvider) provideClustersAndVhosts(ctx context.Context) (clusters []
 
 		labels := convert.ParseServiceLabels(service.Spec.Annotations.Labels)
 		if err = labels.Validate(); err != nil {
-			log.Debugf("skipping service because labels are invalid: %s", err.Error())
+			log.Debugf("Skipping service because labels are invalid: %s", err.Error())
 			continue
 		}
 
 		if !isInIngressNetwork(service, &ingress) {
-			log.Warnf("service is not connected to the ingress network, stopping processing")
+			log.Warnf("Service is not connected to the ingress network, stopping processing")
 			continue
 		}
 
 		cluster, err := convert.SwarmServiceToCDS(service, labels)
 		if err != nil {
-			log.Warnf("skipped generating CDS for service because %s", err.Error())
+			log.Warnf("Skipped generating CDS for service because %s", err.Error())
 			continue
 		}
 
 		err = vhosts.AddService(cluster.Name, labels)
 		if err != nil {
-			log.Warnf("skipped creating virtual host for service because %s", err.Error())
+			log.Warnf("Skipped creating virtual host for service because %s", err.Error())
 			continue
 		}
 

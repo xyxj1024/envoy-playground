@@ -19,12 +19,11 @@ func NewListenerProvider(sdsProvider SDS) *ListenerProvider {
 }
 
 /* Function ProvideListener:
- * returns a HTTP listener for port 80 if TLS is configured;
- * returns a HTTP listener for port 80 and a HTTPS listener
- * for port 443, otherwise.
+ * returns a HTTPS listener for port 443 if TLS is configured;
+ * returns a HTTP listener for port 80, otherwise.
  */
-func (l *ListenerProvider) ProvideListeners(v *convert.VhostCollection) ([]types.Resource, error) {
-	httpListener, httpsListener := l.createListenersFromVhosts(v)
+func (l *ListenerProvider) ProvideListeners(v *convert.VhostCollection, listenerPort uint32) ([]types.Resource, error) {
+	httpListener, httpsListener := l.createListenersFromVhosts(v, listenerPort)
 	if err := httpListener.Validate(); err != nil {
 		return nil, err
 	}
@@ -33,13 +32,13 @@ func (l *ListenerProvider) ProvideListeners(v *convert.VhostCollection) ([]types
 		return []types.Resource{httpListener}, nil
 	}
 
-	return []types.Resource{httpListener, httpsListener}, nil
+	return []types.Resource{httpListener}, nil
 }
 
-func (l *ListenerProvider) createListenersFromVhosts(vhosts *convert.VhostCollection) (http, https *listener.Listener) {
+func (l *ListenerProvider) createListenersFromVhosts(vhosts *convert.VhostCollection, listenerPort uint32) (http, https *listener.Listener) {
 	httpFilter := convert.NewFilterChainBuilder("httpFilter")
-	httpListenerBuilder := convert.NewListenerBuilder("http_listener")
-	httpsListenerBuilder := convert.NewListenerBuilder("https_listener").EnableTLS()
+	httpListenerBuilder := convert.NewListenerBuilder("httpListener")
+	httpsListenerBuilder := convert.NewListenerBuilder("httpsListener").EnableTLS()
 
 	for i := range vhosts.Vhosts {
 		v := vhosts.Vhosts[i]
@@ -59,7 +58,7 @@ func (l *ListenerProvider) createListenersFromVhosts(vhosts *convert.VhostCollec
 	}
 
 	httpListenerBuilder.AddFilterChain(httpFilter)
-	return httpListenerBuilder.Build(), httpsListenerBuilder.Build()
+	return httpListenerBuilder.Build(listenerPort), httpsListenerBuilder.Build(listenerPort)
 }
 
 func (l *ListenerProvider) createFilterChainWithTLS(vhost *route.VirtualHost) *convert.FilterChainBuilder {

@@ -33,19 +33,15 @@ func (b *ListenerBuilder) AddFilterChain(f *FilterChainBuilder) *ListenerBuilder
 	return b
 }
 
-func (b *ListenerBuilder) Build() *listener.Listener {
+func (b *ListenerBuilder) Build(listenerPort uint32) *listener.Listener {
 	const PerConnectionBufferLimit = 32768 // 32 KiB
 
-	var port uint32
 	var listenerFilters []*listener.ListenerFilter
-
 	if b.configureTLS {
-		port = 443
 		listenerFilters = []*listener.ListenerFilter{{
 			Name: "envoy.filters.listener.tls_inspector",
 		}}
 	}
-	port = 80
 
 	chains := []*listener.FilterChain{}
 	for i := range b.filterChains {
@@ -60,7 +56,7 @@ func (b *ListenerBuilder) Build() *listener.Listener {
 					Protocol: core.SocketAddress_TCP,
 					Address:  "0.0.0.0",
 					PortSpecifier: &core.SocketAddress_PortValue{
-						PortValue: uint32(port),
+						PortValue: listenerPort,
 					},
 				},
 			},

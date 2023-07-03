@@ -31,12 +31,14 @@ func NewManager(ads xds.ADS, sds xds.SDS, config cache.SnapshotCache, log logger
 /* Function Listen:
  * just a wrapper around updateConfiguration.
  */
-func (m *Manager) Listen(updateChannel chan string) {
+func (m *Manager) Listen(updateChannel chan UpdateReason) {
 	for {
-		updateReason := <-updateChannel
-		if err := m.updateConfiguration(updateReason); err != nil {
+		update := <-updateChannel
+		if err := m.updateConfiguration(update); err != nil {
 			m.logger.Fatalf(err.Error()) // kill the application for now
 		}
+
+		time.Sleep(30 * time.Second)
 	}
 }
 
@@ -44,15 +46,15 @@ func (m *Manager) Listen(updateChannel chan string) {
  * fetches configuration resources from ADS and SDS providers every 30 seconds and
  * updates snapshot cache.
  */
-func (m *Manager) updateConfiguration(updateReason string) error {
-	m.logger.WithFields(logger.Fields{"reason": updateReason}).
+func (m *Manager) updateConfiguration(update UpdateReason) error {
+	m.logger.WithFields(logger.Fields{"reason": update}).
 		Infof("Control plane updating configurations for Envoy")
 
 	const discoveryInterval = 30 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), discoveryInterval)
 	defer cancel()
 
-	clusters, listeners, err := m.adsProvider.Provide(ctx)
+	clusters, listeners, err := m.adsProvider.Provide(ctx, update.EnvoyListenerPort)
 	if err != nil {
 		return err
 	}
@@ -61,49 +63,39 @@ func (m *Manager) updateConfiguration(updateReason string) error {
 		return err
 	}
 
-	return m.generateSnapshot(clusters, listeners, secrets)
+	return m.generateSnapshot(clusters, listeners, secrets, update.EnvoyNodeId)
 }
 
-func (m *Manager) generateSnapshot(clusters, listeners, secrets []types.Resource) error {
-	var err error
-	config := m.snapshotCache
-	num := len(config.GetStatusKeys())
-	if num > 0 {
-		m.logger.Infof("%d connected nodes", num)
-		for i := 0; i < num; i++ {
-			nodeId := config.GetStatusKeys()[i]
-			m.logger.Infof("creating snapshot for nodeID %s", nodeId)
+func (m *Manager) generateSnapshot(clusters, listeners, secrets []types.Resource, nodeId string) error {
+	version := time.Now().Format(time.RFC3339) // timestamp as version number
 
-			version := time.Now().Format(time.RFC3339) // timestamp as version number
+	resources := make(map[string][]types.Resource, 3)
+	resources[resource.ClusterType] = clusters
+	resources[resource.ListenerType] = listeners
+	resources[resource.SecretType] = secrets
 
-			snap, err := cache.NewSnapshot(version, map[resource.Type][]types.Resource{
-				resource.ClusterType:  clusters,
-				resource.ListenerType: listeners,
-				resource.SecretType:   secrets,
-			})
-			if err != nil {
-				return err
-			}
-
-			if err = snap.Consistent(); err != nil {
-				return err
-			}
-
-			if err = m.snapshotCache.SetSnapshot(
-				context.Background(),
-				staticHash, // the constant hash
-				snap,
-			); err != nil {
-				return err
-			}
-
-			m.logger.WithFields(logger.Fields{
-				"cluster-count":  len(clusters),
-				"listener-count": len(listeners),
-				"secret-count":   len(secrets),
-			}).Debugf("SnapshotCache updated")
-		}
+	snap, err := cache.NewSnapshot(version, resources)
+	if err != nil {
+		return err
 	}
+
+	if err = snap.Consistent(); err != nil {
+		return err
+	}
+
+	if err = m.snapshotCache.SetSnapshot(
+		context.Background(),
+		nodeId,
+		snap,
+	); err != nil {
+		return err
+	}
+	m.logger.Infof("Snapshot served: %+v", snap)
+
+	m.logger.WithFields(logger.Fields{
+		"cluster-count":  len(clusters),
+		"listener-count": len(listeners),
+		"secrets-count":  len(secrets)}).Debugf("SnapshotCache updated")
 
 	return err
 }

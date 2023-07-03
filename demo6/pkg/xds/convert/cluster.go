@@ -36,9 +36,9 @@ func SwarmServiceToEndpoint(service *swarm.Service, labels *ServiceLabel) *endpo
 						Address: &core.Address{
 							Address: &core.Address_SocketAddress{
 								SocketAddress: &core.SocketAddress{
-									Protocol:      labels.Endpoint.Protocol, // TCP or UDP
-									Address:       "tasks." + service.Spec.Annotations.Name,
-									PortSpecifier: &labels.Endpoint.Port,
+									Protocol:      labels.Endpoint.Protocol,  // TCP or UDP
+									Address:       labels.Route.UpstreamHost, // IP address
+									PortSpecifier: &labels.Endpoint.Port,     // 80, 443
 								},
 							},
 						},

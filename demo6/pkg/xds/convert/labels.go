@@ -20,6 +20,7 @@ type ServiceEndpoint struct {
 }
 
 type ServiceRoute struct {
+	UpstreamHost string
 	Domain       string
 	ExtraDomains []string
 	PathPrefix   string
@@ -38,6 +39,7 @@ func NewServiceLabel() ServiceLabel {
 			Port:           types.SocketAddress_PortValue{PortValue: 0},
 		},
 		ServiceRoute{
+			UpstreamHost: "0.0.0.0",
 			ExtraDomains: []string{},
 			PathPrefix:   "/",
 		},
@@ -76,7 +78,6 @@ func (l *ServiceLabel) setEndpointProperty(property, value string) {
 		if strings.EqualFold(value, "udp") {
 			p = types.SocketAddress_UDP
 		}
-
 		l.Endpoint.Protocol = p
 	case "port":
 		v, _ := strconv.ParseUint(value, 10, 32)
@@ -94,6 +95,8 @@ func (l *ServiceLabel) setRouteProperty(property, value string) {
 		l.Route.Domain = value
 	case "extra-domains":
 		l.Route.ExtraDomains = strings.Split(value, ",")
+	case "upstream-host":
+		l.Route.UpstreamHost = value
 	}
 }
 

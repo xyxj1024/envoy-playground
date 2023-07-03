@@ -11,6 +11,7 @@ import (
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	router "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	auth "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
@@ -62,7 +63,7 @@ func (b *FilterChainBuilder) Build(configureTLS bool) *listener.FilterChain {
 
 func (b *FilterChainBuilder) buildHTTPFilterForVhosts(configureTLS bool) *listener.Filter {
 	const (
-		ServerName                                 = "envoy-swarm-control/0.1"
+		ServerName                                 = "envoy-swarm-control/1"
 		HTTPIdleTimeout                            = 1 * time.Hour
 		RequestTimeout                             = 5 * time.Minute
 		MaxConcurrentHTTP2Streams                  = 100
@@ -79,13 +80,21 @@ func (b *FilterChainBuilder) buildHTTPFilterForVhosts(configureTLS bool) *listen
 		Name:         fmt.Sprintf("%s_%s_routes", b.name, routeType),
 		VirtualHosts: b.vhosts,
 	}
+
+	tctx, _ := anypb.New(&router.Router{})
+
 	conManager := &hcm.HttpConnectionManager{
 		ServerName:       ServerName,
 		CodecType:        hcm.HttpConnectionManager_AUTO,
 		StatPrefix:       b.name,
 		UseRemoteAddress: &wrappers.BoolValue{Value: true},
 		RouteSpecifier:   &hcm.HttpConnectionManager_RouteConfig{RouteConfig: routes},
-		HttpFilters:      []*hcm.HttpFilter{{Name: "envoy.filters.http.router"}},
+		HttpFilters: []*hcm.HttpFilter{{
+			Name: wellknown.Router,
+			ConfigType: &hcm.HttpFilter_TypedConfig{
+				TypedConfig: tctx,
+			},
+		}},
 		CommonHttpProtocolOptions: &core.HttpProtocolOptions{
 			IdleTimeout:                  durationpb.New(HTTPIdleTimeout),
 			HeadersWithUnderscoresAction: core.HttpProtocolOptions_REJECT_REQUEST,

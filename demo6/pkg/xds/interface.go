@@ -9,7 +9,7 @@ import (
 )
 
 type ADS interface {
-	Provide(ctx context.Context) (clusters, listeners []types.Resource, err error)
+	Provide(ctx context.Context, listenerPort uint32) (clusters, listeners []types.Resource, err error)
 }
 
 type SDS interface {

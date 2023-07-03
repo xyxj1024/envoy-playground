@@ -82,6 +82,10 @@ func (v VhostCollection) createRoute(clusterIdentifier string, labels *ServiceLa
 				ClusterSpecifier: &route.RouteAction_Cluster{
 					Cluster: clusterIdentifier,
 				},
+				PrefixRewrite: "/robots.txt",
+				HostRewriteSpecifier: &route.RouteAction_HostRewriteLiteral{
+					HostRewriteLiteral: labels.Route.UpstreamHost,
+				},
 				// https://github.com/envoyproxy/envoy/issues/8517#issuecomment-540225144
 				IdleTimeout: durationpb.New(labels.Endpoint.RequestTimeout),
 				Timeout:     durationpb.New(labels.Endpoint.RequestTimeout),

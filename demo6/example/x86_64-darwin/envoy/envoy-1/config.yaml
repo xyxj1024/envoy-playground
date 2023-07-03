@@ -6,8 +6,8 @@ admin:
       port_value: 9001
 
 node:
-  cluster: test-cluster
-  id: test-id
+  cluster: local_cluster_1
+  id: local_node_1
 
 dynamic_resources:
   ads_config:
