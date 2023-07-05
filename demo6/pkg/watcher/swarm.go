@@ -3,49 +3,28 @@ package watcher
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"os"
-	"strconv"
 
-	"envoy-swarm-control/pkg/logger"
 	"envoy-swarm-control/pkg/snapshot"
-	"envoy-swarm-control/pkg/xds"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
+	swarm "github.com/docker/docker/api/types/swarm"
 	docker "github.com/docker/docker/client"
+	"github.com/sirupsen/logrus"
 )
 
-type SwarmEvent struct {
-	client docker.APIClient
-	logger logger.Logger
-}
-
-func NewSwarmEvent(log logger.Logger) *SwarmEvent {
-	return &SwarmEvent{
-		client: xds.NewDockerClient(),
-		logger: log,
-	}
-}
-
 /* Function InitUpdateChannel:
- * initializes the two fields of an update channel.
+ * sets the update channel to an empty structure.
  */
-func InitUpdateChannel(updateChannel chan snapshot.UpdateReason) {
-	updateChannel <- snapshot.UpdateReason{
-		EnvoyNodeId:       "test-id",
-		EnvoyListenerPort: 10000,
-	}
+func InitUpdateChannel(updateChannel chan snapshot.ServiceLabels) {
+	updateChannel <- snapshot.ServiceLabels{}
 }
 
-/* Function StartWatcher:
- * reads events reported by Docker and processes them;
- * accepts user input (node ID and listener port) as update channel.
- * Please follow the guidance from comments in the file:
- * https://github.com/docker/engine/blob/master/client/events.go
- */
-func (s SwarmEvent) StartWatcher(ctx context.Context, updateChannel chan snapshot.UpdateReason) {
-	events, errorEvent := s.client.Events(ctx, types.EventsOptions{
+func StartWatcher(ctx context.Context, cli docker.APIClient, ingressNetwork string, updateChannel chan snapshot.ServiceLabels) {
+	events, errorEvent := cli.Events(ctx, types.EventsOptions{
 		Filters: filters.NewArgs(filters.KeyValuePair{Key: "type", Value: "service"}),
 	})
 	/* Docker services report the following events:
@@ -55,28 +34,77 @@ func (s SwarmEvent) StartWatcher(ctx context.Context, updateChannel chan snapsho
 	 */
 	for {
 		select {
+		case err := <-errorEvent:
+			logrus.Errorf(err.Error())
+			StartWatcher(ctx, cli, ingressNetwork, updateChannel)
+
 		case event := <-events:
-			s.logger.WithFields(logger.Fields{"type": event.Type, "action": event.Action}).Debugf("Docker swarm service event received")
+			logrus.WithFields(logrus.Fields{"type": event.Type, "action": event.Action}).Debugf("Docker swarm service event received")
+
 			if event.Action == "create" {
 				continue
 			}
 
-			fmt.Println("Please enter Envoy node ID: ")
-			nodeId := bufio.NewScanner(os.Stdin)
-			nodeId.Scan()
-
-			fmt.Println("Please enter listener port: ")
-			listenerPortStr := bufio.NewScanner(os.Stdin)
-			listenerPortStr.Scan()
-			listenerPort, _ := strconv.ParseUint(listenerPortStr.Text(), 10, 64)
-
-			updateChannel <- snapshot.UpdateReason{
-				EnvoyNodeId:       string(nodeId.Text()),
-				EnvoyListenerPort: uint32(listenerPort),
+			ingress, err := getIngressNetwork(ctx, cli, ingressNetwork)
+			if err != nil {
+				return
 			}
-		case err := <-errorEvent:
-			s.logger.Errorf(err.Error())
-			s.StartWatcher(ctx, updateChannel)
+
+			fmt.Println("Please enter the service name to be updated: ")
+			userInput := bufio.NewScanner(os.Stdin)
+			userInput.Scan()
+			serviceName := string(userInput.Text())
+
+			args := filters.NewArgs()
+			args.Add("name", serviceName)
+			services, err := cli.ServiceList(context.Background(), types.ServiceListOptions{Filters: args})
+			if err != nil {
+				return
+			}
+			if len(services) != 1 {
+				logrus.Println("Something went wrong")
+				logrus.Println("Count:", len(services))
+				logrus.Printf("Service %s did not found", serviceName)
+				return
+			}
+
+			for _, service := range services {
+				if !isInIngressNetwork(&service, &ingress) {
+					logrus.Warnf("Service is not connected to the ingress network, stopping processing")
+					return
+				}
+
+				labels := snapshot.ParseServiceLabels(service.Spec.Annotations.Labels)
+				if err = labels.Validate(); err != nil {
+					logrus.Debugf("Skipping service because labels are invalid: %s", err.Error())
+					return
+				}
+
+				updateChannel <- *labels
+			}
 		}
 	}
+}
+
+func getIngressNetwork(ctx context.Context, cli docker.APIClient, ingressNetwork string) (network types.NetworkResource, err error) {
+	network, err = cli.NetworkInspect(ctx, ingressNetwork, types.NetworkInspectOptions{})
+	if err != nil {
+		return
+	}
+
+	if network.Scope != "swarm" {
+		return network, errors.New("the provided ingress network is not scoped for the entire cluster (swarm)")
+	}
+
+	return
+}
+
+func isInIngressNetwork(service *swarm.Service, ingress *types.NetworkResource) bool {
+	for _, vip := range service.Endpoint.VirtualIPs {
+		if vip.NetworkID == ingress.ID {
+			return true
+		}
+	}
+
+	return false
 }

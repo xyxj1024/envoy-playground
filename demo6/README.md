@@ -27,12 +27,16 @@ The `docker_gwbridge` is a bridge network that connects the overlay networks (in
 go run envoy-swarm-control --debug --cert-dir $(pwd)/example/x86_64-darwin/cert
 
 docker service update \
+    --label-add envoy.status.node-id=local_node_1 \
+    --label-add envoy.listener.port=10001 \
     --label-add envoy.endpoint.port=80 \
     --label-add envoy.route.domain=example.com \
     --label-add envoy.route.upstream-host=www.google.com \
     envoy-1
 
 docker service update \
+    --label-add envoy.status.node-id=local_node_2 \
+    --label-add envoy.listener.port=10002 \
     --label-add envoy.endpoint.port=80 \
     --label-add envoy.route.domain=example.com \
     --label-add envoy.route.upstream-host=www.wustl.edu \

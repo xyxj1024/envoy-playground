@@ -11,13 +11,11 @@ import (
 	"time"
 
 	"envoy-swarm-control/pkg/callback"
-	"envoy-swarm-control/pkg/logger"
 	"envoy-swarm-control/pkg/snapshot"
-	"envoy-swarm-control/pkg/storage"
 	"envoy-swarm-control/pkg/watcher"
-	"envoy-swarm-control/pkg/xds"
-	"envoy-swarm-control/pkg/xds/tls"
 
+	docker "github.com/docker/docker/client"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 
@@ -27,17 +25,14 @@ import (
 	listenerservice "github.com/envoyproxy/go-control-plane/envoy/service/listener/v3"
 	routeservice "github.com/envoyproxy/go-control-plane/envoy/service/route/v3"
 	runtimeservice "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
-	secretservice "github.com/envoyproxy/go-control-plane/envoy/service/secret/v3"
 	cache "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	server "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 )
 
 var (
-	debug                bool
-	xdsClusterName       string
-	xdsPort              uint
-	ingressNetwork       string
-	certificateDirectory string
+	debug          bool
+	xdsPort        uint
+	ingressNetwork string
 )
 
 const (
@@ -49,19 +44,14 @@ const (
 
 func init() {
 	flag.BoolVar(&debug, "debug", true, "Enable xDS server debug logging")
-	flag.StringVar(&xdsClusterName, "xds-cluster", "control-plane", "xDS cluster name")                  // Name of the cluster which provides Envoy instances ADS/SDS subscription
 	flag.UintVar(&xdsPort, "xds-port", 18000, "xDS management server port")                              // Port number to which Envoy instances are bound for configuration updates
 	flag.StringVar(&ingressNetwork, "ingress-network", "mesh-traffic", "Docker overlay network name/ID") // Deploy using: docker network create --driver=overlay --attachable mesh-traffic
-	flag.StringVar(&certificateDirectory, "cert-dir", "cert", "OpenSSL X.509 certificate file path")
 }
 
 func main() {
 	flag.Parse()
-	logger.BootLogger(debug)
 	mainctx := context.Background()
-	logger.Infof("Starting control plane")
-
-	// Deploy()
+	logrus.Infof("Starting control plane")
 
 	// Create xDS management server
 	signal := make(chan struct{})
@@ -75,21 +65,13 @@ func main() {
 	config := cache.NewSnapshotCache(
 		true, // enable the ADS flag
 		cache.IDHash{},
-		logger.Instance().WithFields(logger.Fields{"area": "snapshot-cache"}),
+		nil,
 	)
 	srv := server.NewServer(mainctx, config, cb)
 
-	// Create and run watcher for Docker events
-	sdsProvider := setupTLS()
-	adsProvider := setupDiscovery(sdsProvider)
-	manager := snapshot.NewManager(
-		adsProvider,
-		sdsProvider,
-		config,
-		logger.Instance().WithFields(logger.Fields{"area": "snapshot-manager"}),
-	)
-	events := generateWatcher(mainctx)
-	go manager.Listen(events)
+	manager := snapshot.NewManager(config)
+	update := generateWatcher(mainctx)
+	go manager.Discover(update)
 
 	// Run xDS management server
 	go runManagementServer(mainctx, srv, xdsPort)
@@ -114,15 +96,15 @@ func runManagementServer(ctx context.Context, srv server.Server, port uint) {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
-		logger.Fatalf(err.Error())
+		logrus.Fatalf(err.Error())
 	}
 
 	registerServices(grpcServer, srv)
 
-	logger.Infof("xDS Management server listening on %d", port)
+	logrus.Infof("xDS Management server listening on %d", port)
 	go func() {
 		if err = grpcServer.Serve(lis); err != nil {
-			logger.Errorf(err.Error())
+			logrus.Errorf(err.Error())
 		}
 	}()
 	<-ctx.Done()
@@ -135,55 +117,43 @@ func registerServices(grpcServer *grpc.Server, srv server.Server) {
 	clusterservice.RegisterClusterDiscoveryServiceServer(grpcServer, srv)
 	routeservice.RegisterRouteDiscoveryServiceServer(grpcServer, srv)
 	listenerservice.RegisterListenerDiscoveryServiceServer(grpcServer, srv)
-	secretservice.RegisterSecretDiscoveryServiceServer(grpcServer, srv)
+	// secretservice.RegisterSecretDiscoveryServiceServer(grpcServer, srv)
 	runtimeservice.RegisterRuntimeDiscoveryServiceServer(grpcServer, srv)
-}
-
-/* Function setupDiscovery:
- * returns an ADS provider whose "dockerClient" field is handled by xds/provider.go.
- */
-func setupDiscovery(sdsProvider xds.SDS) xds.ADS {
-	listenerBuilder := xds.NewListenerProvider(sdsProvider)
-
-	return xds.NewADSProvider(
-		ingressNetwork,
-		listenerBuilder,
-		logger.Instance().WithFields(logger.Fields{"area": "ads-provider"}),
-	)
-}
-
-/* Function setupTLS:
- * fetches certificate files and returns a SDS provider.
- */
-func setupTLS() (sdsProvider xds.SDS) {
-	fileStorage := getStorage()
-	certificateStorage := &tls.Certificate{Storage: fileStorage}
-	sdsProvider = tls.NewCertificateSecretsProvider(
-		xdsClusterName,
-		certificateStorage,
-		logger.Instance().WithFields(logger.Fields{"area": "sds-provider"}),
-	)
-
-	return sdsProvider
 }
 
 /* Function generateWatcher:
  * creates a new watcher for Docker events and an initial update channel.
  */
-func generateWatcher(ctx context.Context) chan snapshot.UpdateReason {
-	updateChannel := make(chan snapshot.UpdateReason)
-	log := logger.Instance().WithFields(logger.Fields{"area": "docker-events-watcher"})
+func generateWatcher(ctx context.Context) chan snapshot.ServiceLabels {
+	updateChannel := make(chan snapshot.ServiceLabels)
 
-	go watcher.NewSwarmEvent(log).StartWatcher(ctx, updateChannel)
+	go watcher.StartWatcher(
+		ctx,
+		newDockerClient(),
+		ingressNetwork,
+		updateChannel,
+	)
 
 	go watcher.InitUpdateChannel(updateChannel)
 
 	return updateChannel
 }
 
-func getStorage() storage.Storage {
-	disk := storage.NewDiskStorage(certificateDirectory, logger.Instance().WithFields(logger.Fields{"area": "disk"}))
-	return disk
+func newDockerClient() *docker.Client {
+	httpHeaders := map[string]string{
+		"User-Agent": "envoy-swarm-control",
+	}
+
+	c, err := docker.NewClientWithOpts(
+		docker.FromEnv,
+		docker.WithHTTPHeaders(httpHeaders),
+		docker.WithAPIVersionNegotiation(), // For "Maximum supported API version is 1.41"
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	return c
 }
 
 func waitForSignal(ctx context.Context) {
@@ -191,6 +161,6 @@ func waitForSignal(ctx context.Context) {
 	signal.Notify(s, syscall.SIGINT, syscall.SIGTERM)
 
 	<-s
-	logger.Infof("Shutting down control plane upon receiving SIGINT...")
+	logrus.Infof("Shutting down control plane upon receiving SIGINT...")
 	ctx.Done()
 }

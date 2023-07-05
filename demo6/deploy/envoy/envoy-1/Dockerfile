@@ -1,8 +1,8 @@
 FROM envoyproxy/envoy:dev
 
 ENV ENVOY_UID=0
-#EXPOSE 80
-#EXPOSE 443
+EXPOSE 9001
+EXPOSE 10001
 
 #ARG CONTROL_PLANE_HOST
 COPY config.yaml /etc/envoy/envoy_1.yaml
