@@ -60,7 +60,7 @@ $ go run client/client.go
 
 Envoy debugging info:
 
-```console
+```bash
 envoy-grpc-example-extauthz-1  | 2023/06/02 02:51:15 >>> Authorization called check()
 envoy-grpc-example-extauthz-1  | 2023/06/02 02:51:15 Inbound Headers: 
 envoy-grpc-example-extauthz-1  | 2023/06/02 02:51:15 {

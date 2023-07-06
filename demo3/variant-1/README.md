@@ -51,7 +51,7 @@ $ envoy --version | grep -o '[0-9].[0-9]\+.[0-9]' | tail -n1
 
 After Envoy is started, we can verify our initial configuration (`dynamic_config.yaml`) through the following console output:
 
-```console
+```bash
 [2023-05-22 18:18:41.967][1042742][info][main] [source/server/server.cc:819] runtime: {}
 [2023-05-22 18:18:41.971][1042742][info][admin] [source/server/admin/admin.cc:67] admin address: 127.0.0.1:9000
 [2023-05-22 18:18:41.971][1042742][info][config] [source/server/configuration_impl.cc:131] loading tracing configuration
@@ -139,7 +139,7 @@ The initial cluster named `xds_cluster` with URL `/envoy.service.discovery.v3.Ag
 
 Then, start the xDS server, and we can observe:
 
-```console
+```bash
 [2023-05-22 19:51:31.123][1076786][debug][config] [source/common/config/grpc_mux_impl.cc:222] Received gRPC message for type.googleapis.com/envoy.config.cluster.v3.Cluster at version 1
 [2023-05-22 19:51:31.123][1076786][debug][config] [source/common/config/grpc_mux_impl.cc:199] Pausing discovery requests for type.googleapis.com/envoy.config.cluster.v3.Cluster (previous count 0)
 [2023-05-22 19:51:31.124][1076786][debug][config] [source/common/config/grpc_mux_impl.cc:199] Pausing discovery requests for type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment (previous count 0)
@@ -235,7 +235,7 @@ Then, start the xDS server, and we can observe:
 
 As the `DiscoveryResponse` sent by the xDS server is being processed, new `DiscoveryRequest`s will be paused. Finally, access Envoy, and we can observe:
 
-```console
+```bash
 [2023-05-22 19:52:02.164][1077077][debug][conn_handler] [source/extensions/listener_managers/listener_manager/active_tcp_listener.cc:147] [C7] new connection from 127.0.0.1:50585
 [2023-05-22 19:52:02.380][1077077][debug][http] [source/common/http/conn_manager_impl.cc:306] [C7] new stream
 [2023-05-22 19:52:02.381][1077077][debug][http] [source/common/http/conn_manager_impl.cc:972] [C7][S3202891732645497323] request headers complete (end_stream=true):

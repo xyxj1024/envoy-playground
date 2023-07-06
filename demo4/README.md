@@ -64,7 +64,7 @@ go run client/client.go --host xds:///be-srv
 
 Then, we would find consistency check for snapshot failed:
 
-```console
+```bash
 mismatched "type.googleapis.com/envoy.config.route.v3.RouteConfiguration" reference and resource lengths: len(map[]) != 1
 ```
 
