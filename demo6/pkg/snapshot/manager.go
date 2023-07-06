@@ -17,8 +17,8 @@ import (
 )
 
 type Manager struct {
-	snapshotCache       cache.SnapshotCache
-	clusters, listeners []types.Resource
+	snapshotCache               cache.SnapshotCache
+	clusters, listeners, routes []types.Resource
 }
 
 func NewManager(config cache.SnapshotCache) *Manager {
@@ -26,48 +26,50 @@ func NewManager(config cache.SnapshotCache) *Manager {
 		snapshotCache: config,
 		clusters:      []types.Resource{},
 		listeners:     []types.Resource{},
+		routes:        []types.Resource{},
 	}
 }
 
 /* Function Discover:
  * just a wrapper around updateConfiguration.
  */
-func (m *Manager) Discover(updateChannel chan ServiceLabels) {
+func (m *Manager) Discover(updateChannel chan ServiceLabels, ctx context.Context) {
 	for {
 		update := <-updateChannel
 		if reflect.DeepEqual(update, ServiceLabels{}) {
 			continue
 		}
 
-		m.updateConfiguration(update)
+		m.updateConfiguration(update, ctx)
 
 		time.Sleep(30 * time.Second)
 	}
 }
 
-func (m *Manager) updateConfiguration(update ServiceLabels) {
-	const discoveryInterval = 30 * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), discoveryInterval)
-	defer cancel()
-
+func (m *Manager) updateConfiguration(update ServiceLabels, ctx context.Context) {
 	version := time.Now().Format(time.RFC3339) // timestamp as version number
 	logrus.Infof(">>>>>>>>>>>>>>>>>>> creating snapshot " + fmt.Sprint(version) + " for nodeID " + fmt.Sprint(update.Status.NodeID))
 
-	cluster := myresource.ProvideCluster(fmt.Sprintf("%s_cluster", update.Status.NodeID), update.Route.UpstreamHost)
+	cluster := myresource.ProvideCluster(
+		fmt.Sprintf("%s_cluster", update.Status.NodeID),
+		update.Route.UpstreamHost,
+		update.Endpoint.Port.PortValue,
+	)
+	listener := myresource.ProvideHTTPListener(
+		fmt.Sprintf("%s_listener", update.Status.NodeID),
+		fmt.Sprintf("%s_route", update.Status.NodeID),
+		update.Listener.Port.PortValue,
+	)
 	route := myresource.ProvideRoute(
 		fmt.Sprintf("%s_route", update.Status.NodeID),
 		fmt.Sprintf("%s_service", update.Status.NodeID),
 		fmt.Sprintf("%s_cluster", update.Status.NodeID),
 		update.Route.UpstreamHost,
 	)
-	listener := myresource.ProvideListener(
-		fmt.Sprintf("%s_listener", update.Status.NodeID),
-		fmt.Sprintf("%s_route", update.Status.NodeID),
-		update.Listener.Port.PortValue,
-	)
 
 	m.clusters = append(m.clusters, cluster)
 	m.listeners = append(m.listeners, listener)
+	m.routes = append(m.routes, route)
 
 	resources := make(map[string][]types.Resource, 3)
 	resources[resource.ClusterType] = []types.Resource{cluster}

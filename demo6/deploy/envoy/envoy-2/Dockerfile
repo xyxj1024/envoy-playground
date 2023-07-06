@@ -1,6 +1,7 @@
 FROM envoyproxy/envoy:dev
 
 ENV ENVOY_UID=0
+EXPOSE 8002
 EXPOSE 9002
 EXPOSE 10002
 

@@ -2,6 +2,8 @@
 
 The demo code is mostly copied from [Solo.io Hoot Episode 4](https://github.com/solo-io/hoot/blob/master/04-xds/).
 
+The Envoy instance will be dynamically configured by the control plane such that it [routes the traffic to two different clusters](https://github.com/envoyproxy/envoy/issues/18837) based on a weight value specified by the user. [The `weighted_clusters` configuration block](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/traffic_splitting#traffic-splitting-across-multiple-upstreams) is set in LDS.
+
 ### Development Environment
 
 ```bash
@@ -205,15 +207,7 @@ We can issue a `curl` request to the Envoy instance:
 
 ```bash
 # Open terminal four
-$ curl -i http://localhost:10000/
-HTTP/1.1 200 OK
-date: Thu, 06 Jul 2023 20:17:35 GMT
-content-length: 6
-content-type: text/plain; charset=utf-8
-x-envoy-upstream-service-time: 0
-server: envoy
-
-black
+curl -i http://localhost:10000/
 ```
 
 And Envoy updates debugging information as follows:
@@ -267,7 +261,7 @@ And Envoy updates debugging information as follows:
 Generate traffic and see statistics:
 
 ```bash
-while true; do hey -n 100 -c 5 -t 1  http://localhost:10000/ ; sleep 1;done
+while true; do hey -n 100 -c 5 -t 1  http://localhost:10000/ ; sleep 1; done
 ```
 
 Black Server returns response code 200 and White Server returns response code 201.

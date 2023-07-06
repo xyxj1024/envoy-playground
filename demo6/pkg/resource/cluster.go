@@ -11,20 +11,8 @@ import (
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 )
 
-func ProvideCluster(clusterName string, upstreamHost string) *cluster.Cluster {
+func ProvideCluster(clusterName string, upstreamHost string, upstreamPort uint32) *cluster.Cluster {
 	logrus.Infof(">>>>>>>>>>>>>>>>>>> creating cluster with clusterName %s, upstreamHost %s", clusterName, upstreamHost)
-
-	hst := &core.Address{
-		Address: &core.Address_SocketAddress{
-			SocketAddress: &core.SocketAddress{
-				Address:  upstreamHost,
-				Protocol: core.SocketAddress_TCP,
-				PortSpecifier: &core.SocketAddress_PortValue{
-					PortValue: uint32(80), // for HTTP
-				},
-			},
-		},
-	}
 
 	return &cluster.Cluster{
 		Name:                 clusterName,
@@ -32,19 +20,33 @@ func ProvideCluster(clusterName string, upstreamHost string) *cluster.Cluster {
 		ClusterDiscoveryType: &cluster.Cluster_Type{Type: cluster.Cluster_LOGICAL_DNS},
 		DnsLookupFamily:      cluster.Cluster_V4_ONLY,
 		LbPolicy:             cluster.Cluster_ROUND_ROBIN,
-		LoadAssignment: &endpoint.ClusterLoadAssignment{
-			ClusterName: clusterName,
-			Endpoints: []*endpoint.LocalityLbEndpoints{{
-				LbEndpoints: []*endpoint.LbEndpoint{
-					{
-						HostIdentifier: &endpoint.LbEndpoint_Endpoint{
-							Endpoint: &endpoint.Endpoint{
-								Address: hst,
-							},
-						},
+		LoadAssignment:       makeEndpoint(clusterName, upstreamHost, upstreamPort),
+	}
+}
+
+func makeEndpoint(clusterName string, upstreamHost string, upstreamPort uint32) *endpoint.ClusterLoadAssignment {
+	hst := &endpoint.Endpoint{
+		Address: &core.Address{
+			Address: &core.Address_SocketAddress{
+				SocketAddress: &core.SocketAddress{
+					Protocol: core.SocketAddress_TCP,
+					Address:  upstreamHost, // e.g., www.google.com; can also be a Docker service name
+					PortSpecifier: &core.SocketAddress_PortValue{
+						PortValue: upstreamPort,
 					},
 				},
-			}},
+			},
 		},
+	}
+
+	return &endpoint.ClusterLoadAssignment{
+		ClusterName: clusterName,
+		Endpoints: []*endpoint.LocalityLbEndpoints{{
+			LbEndpoints: []*endpoint.LbEndpoint{{
+				HostIdentifier: &endpoint.LbEndpoint_Endpoint{
+					Endpoint: hst,
+				},
+			}},
+		}},
 	}
 }

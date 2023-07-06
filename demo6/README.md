@@ -23,32 +23,40 @@ The `docker_gwbridge` is a bridge network that connects the overlay networks (in
 
 ## Run Code
 
+Deploy, and then update certain Envoy service(s):
+
 ```bash
 # Create overlay network and Envoy instances
-.$(pwd)/deploy/scripts/deploy.sh
+bash $(pwd)/deploy/scripts/deploy.sh
 
 # Run control plane
 go run envoy-swarm-control --debug
 
-# Update Envoy services
+# Update envoy-1
 docker service update \
     --label-add envoy.status.node-id=local_node_1 \
-    --label-add envoy.listener.port=10001 \
-    --label-add envoy.endpoint.port=80 \
+    --label-add envoy.listener.port=10000 \
+    --label-add envoy.endpoint.port=8080 \
     --label-add envoy.route.domain=example.com \
-    --label-add envoy.route.upstream-host=www.google.com \
+    --label-add envoy.route.upstream-host=app-1 \
     envoy-1
 
+# Update envoy-2
 docker service update \
     --label-add envoy.status.node-id=local_node_2 \
-    --label-add envoy.listener.port=10002 \
+    --label-add envoy.listener.port=10000 \
     --label-add envoy.endpoint.port=80 \
     --label-add envoy.route.domain=example.com \
     --label-add envoy.route.upstream-host=www.wustl.edu \
     envoy-2
+```
 
+For example, let's take a look at the state of `envoy-1`:
+
+```bash
 # Check Envoy logs
 docker service logs -f envoy-1
 
-docker service logs -f envoy-2
+# Access envoy-1
+curl -i http://localhost:8001/
 ```

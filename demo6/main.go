@@ -71,7 +71,7 @@ func main() {
 
 	manager := snapshot.NewManager(config)
 	update := generateWatcher(mainctx)
-	go manager.Discover(update)
+	go manager.Discover(update, mainctx)
 
 	// Run xDS management server
 	go runManagementServer(mainctx, srv, xdsPort)
