@@ -1,0 +1,95 @@
+admin:
+  access_log_path: /dev/null
+  address:
+    socket_address:
+      address: 127.0.0.1
+      port_value: 9000
+
+node:
+  cluster: service_greeter
+  id: test-id
+
+static_resources:
+  listeners:
+  # There is a single listener bound to localhost:10000.
+  - name: listener_0
+    address:
+      socket_address: { address: 127.0.0.1, port_value: 10000 }
+    filter_chains:
+    - filters:
+      # The HTTP connection manager is the only network filter.
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: ingress_http
+          codec_type: AUTO
+          # The route table, mapping "www.google.com/" to "www.google.com/robots.txt".
+          route_config:
+            name: local_route
+            virtual_hosts:
+            - name: local_service
+              domains: ["*"]
+              routes:
+              - match:
+                  prefix: "/"
+                route: 
+                  cluster: envoy_control                  # specified by user input
+                  prefix_rewrite: "/robots.txt"
+                  host_rewrite_literal: "www.google.com"  # specified by user input
+          http_filters:
+          # The HTTP router filter.
+          - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+      # Configure TLS transport socket. It listens to downstream connections using TLS.        
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+          # TLS contextual information shared by client/server.
+          common_tls_context:
+            tls_certificate_sds_secret_configs:
+            - name: server_cert
+        
+
+  clusters:
+  - name: envoy_control                   # specified by user input
+    connect_timeout: 0.25s
+    type: strict_dns
+    lb_policy: round_robin
+    load_assignment:
+      cluster_name: envoy_control         # specified by user input
+      # Static endpoint assignment.
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: www.google.com   # specified by user input
+                # Port 443 is the default port for HTTPS.
+                port_value: 443
+    # Upstream TLS configuration.
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+
+
+  # Static secrets.
+  secrets:
+  - name: server_cert
+    tls_certificate:
+      certificate_chain:
+        filename: certs/envoy-proxy-server.crt
+      private_key:
+        filename: certs/envoy-proxy-server.key
+  - name: client_cert
+    tls_certificate:
+      certificate_chain:
+        filename: certs/envoy-proxy-client.crt
+      private_key:
+        filename: envoy-proxy-client.key
+  - name: validation_context
+    validation_context:
+      trusted_ca:
+        filename: certs/envoy-intermediate-ca.crt

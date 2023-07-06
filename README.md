@@ -10,6 +10,7 @@ Repo description:
 - Demo 3: Envoy dynamic configuration "hello world" (single Envoy instance)
 - Demo 4: gRPC communication with Envoy xDS-based global load balancing
 - Demo 5: Dockerized gRPC communication with Envoy external authorization
+- Demo 6: Envoy dynamic configuration (multiple Envoy services in a Docker swarm)
 
 ## Useful Links
 
@@ -17,7 +18,9 @@ Repo description:
 - [Docker engine documentation](https://docs.docker.com/config/labels-custom-metadata/)
 - [Container-level and service-level labels](https://docs.docker.com/compose/compose-file/compose-file-v3/)
 - [Open source projects built on Envoy proxy](https://www.envoyproxy.io/community.html)
+- [Gloo Project](https://github.com/solo-io/gloo/tree/main/projects/gloo)
 - [Jordan Webb](https://jordemort.dev/), "[The container orchestrator landscape](https://lwn.net/Articles/905164/)," August 23, 2022.
+- Christian Posta, "[Guidance for Building a Control Plane to Manage Envoy Proxy at the edge, as a gateway, or in a mesh](https://blog.christianposta.com/envoy/guidance-for-building-a-control-plane-to-manage-envoy-proxy-based-infrastructure/)," February 12, 2019.
 - Viktor Adam, "[Podlike](https://blog.viktoradam.net/2018/05/14/podlike/)," May 14, 2018.
 - Hechao Li, "[Linux Bridge - Part 1](https://hechao.li/2017/12/13/linux-bridge-part1/)," December 13, 2017.
 - Karl Matthias, "[Sidecar: Service Discovery for all Docker Environments](https://relistan.com/sidecar-service-discovery-for-all-docker-environments)," August 04, 2016.

@@ -1,21 +1,29 @@
+node:
+  id: local_node_1
+  cluster: local_cluster_1
+
 admin:
-  access_log_path: /dev/null
+  access_log_path: /dev/stdout
   address:
     socket_address:
       address: 0.0.0.0
       port_value: 9001
 
-node:
-  cluster: local_cluster_1
-  id: local_node_1
+layered_runtime:
+  # use runtime to limit number of connections to prevent file descriptor exhaustion
+  layers:
+    - name: static_layer_0
+      static_layer:
+        overload:
+          global_downstream_max_connections: 100
 
 dynamic_resources:
   ads_config:
-    api_type: GRPC
     transport_api_version: V3
+    api_type: GRPC
     grpc_services:
       - envoy_grpc:
-          cluster_name: control_plane # can be overridden with "--xds-cluster"
+          cluster_name: control_plane
   cds_config:
     ads: {}
     resource_api_version: V3
@@ -25,16 +33,23 @@ dynamic_resources:
 
 static_resources:
   clusters:
-    - name: control_plane
-      type: strict_dns
-      connect_timeout: 1s
-      http2_protocol_options: {}
-      load_assignment:
-        cluster_name: control_plane
-        endpoints:
-          - lb_endpoints:
-            - endpoint:
-                address:
-                  socket_address:
-                    address: host.docker.internal
-                    port_value: 18000 # can be overridden with "--xds-port"
+  - name: control_plane
+    connect_timeout: 0.25s
+    type: strict_dns
+    lb_policy: ROUND_ROBIN
+    http2_protocol_options: {}
+    upstream_connection_options:
+      # important:
+      # configure a TCP keep-alive to detect and reconnect to the admin
+      # server in the event of a TCP socket half open connection
+      # the default values are very conservative, so you will want to tune them.
+      tcp_keepalive: {}
+    load_assignment:
+      cluster_name: control_plane
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: host.docker.internal
+                port_value: 18000 # can be overridden with "--xds-port"
