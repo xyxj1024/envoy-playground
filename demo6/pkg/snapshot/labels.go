@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	valid "github.com/asaskevich/govalidator"
-
 	types "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 )
 
@@ -30,8 +28,6 @@ type ServiceEndpoint struct {
 
 type ServiceRoute struct {
 	UpstreamHost string
-	Domain       string
-	ExtraDomains []string
 	PathPrefix   string
 }
 
@@ -108,10 +104,6 @@ func (l *ServiceLabels) setRouteProperty(property, value string) {
 	switch strings.ToLower(property) {
 	case "path":
 		l.Route.PathPrefix = fmt.Sprintf("/%s", strings.TrimPrefix(value, "/"))
-	case "domain":
-		l.Route.Domain = value
-	case "extra-domains":
-		l.Route.ExtraDomains = strings.Split(value, ",")
 	case "upstream-host":
 		l.Route.UpstreamHost = value
 	}
@@ -126,22 +118,8 @@ func (l ServiceLabels) Validate() error {
 		return errors.New("there is no endpoint.port label specified")
 	}
 
-	if l.Route.Domain == "" {
-		return errors.New("there is no route.domain label specified")
-	}
-
 	if l.Endpoint.RequestTimeout.Seconds() < 0 {
 		return errors.New("the endpoint.timeout can't be a negative number")
-	}
-
-	if !valid.IsDNSName(l.Route.Domain) {
-		return errors.New("the route.domain is not a valid DNS name")
-	}
-
-	for i := range l.Route.ExtraDomains {
-		if !valid.IsDNSName(l.Route.ExtraDomains[i]) {
-			return errors.New("the route.extra-domains contains an invalid DNS name")
-		}
 	}
 
 	return nil

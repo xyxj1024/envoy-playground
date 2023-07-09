@@ -65,6 +65,8 @@ func (m *Manager) updateConfiguration(update ServiceLabels, ctx context.Context)
 		fmt.Sprintf("%s_service", update.Status.NodeID),
 		fmt.Sprintf("%s_cluster", update.Status.NodeID),
 		update.Route.UpstreamHost,
+		update.Route.PathPrefix,
+		update.Endpoint.RequestTimeout,
 	)
 
 	m.clusters = append(m.clusters, cluster)

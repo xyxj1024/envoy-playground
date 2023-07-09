@@ -5,12 +5,13 @@ Spring 2023 @Washington University in St. Louis
 > Kelsey Hightower: "I might build a little prototype, I might build something at the hello-world level, and then I'd like to share it. So I'll just put all of my notes like on GitHub, right? Like the whole concept of the README. I just learn about service mesh, here's a little prototype that I built to crystallize what I've learned, and it's going to throw it here on GitHub so others can like check my notes or maybe you can learn from it, too." ([The ReadME Podcast, Episode 30](https://github.com/readme/podcast/kelsey-hightower))
 
 Repo description:
-- Demo 1: Envoy monitoring with Prometheus and Grafana
-- Demo 2: Observing containerized Envoy with `bpftrace` programs
+- Demo 1: Envoy monitoring with [Prometheus](https://github.com/prometheus/prometheus) and [Grafana](https://github.com/grafana/grafana)
+- Demo 2: Observing containerized Envoy with [`bpftrace`](https://github.com/iovisor/bpftrace) programs
 - Demo 3: Envoy dynamic configuration "hello world" (single Envoy instance)
 - Demo 4: gRPC communication with Envoy xDS-based global load balancing
-- Demo 5: Dockerized gRPC communication with Envoy external authorization
+- Demo 5: Dockerized gRPC communication with Envoy [external authorization](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/ext_authz_filter)
 - Demo 6: Envoy dynamic configuration (multiple Envoy services in a Docker swarm)
+- Demo 7: Envoy [SDS](https://www.envoyproxy.io/docs/envoy/latest/configuration/security/secret) "hello world"
 
 ## Useful Links
 

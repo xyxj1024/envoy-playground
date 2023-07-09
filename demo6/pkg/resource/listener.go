@@ -2,11 +2,14 @@ package resource
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
@@ -14,6 +17,14 @@ import (
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+)
+
+const (
+	HTTPIdleTimeout                            = 1 * time.Hour
+	RequestTimeout                             = 5 * time.Minute
+	MaxConcurrentHTTP2Streams                  = 100
+	InitialDownstreamHTTP2StreamWindowSize     = 65536   // 64 KiB
+	InitialDownstreamHTTP2ConnectionWindowSize = 1048576 // 1 MiB
 )
 
 func ProvideHTTPListener(listenerName, routeConfigName string, listenerPort uint32) *listener.Listener {
@@ -34,6 +45,17 @@ func ProvideHTTPListener(listenerName, routeConfigName string, listenerPort uint
 				TypedConfig: messageToAny(&router.Router{}),
 			},
 		}},
+		CommonHttpProtocolOptions: &core.HttpProtocolOptions{
+			IdleTimeout:                  durationpb.New(HTTPIdleTimeout),
+			HeadersWithUnderscoresAction: core.HttpProtocolOptions_REJECT_REQUEST,
+		},
+		Http2ProtocolOptions: &core.Http2ProtocolOptions{
+			MaxConcurrentStreams:        &wrappers.UInt32Value{Value: uint32(MaxConcurrentHTTP2Streams)},
+			InitialStreamWindowSize:     &wrappers.UInt32Value{Value: uint32(InitialDownstreamHTTP2StreamWindowSize)},
+			InitialConnectionWindowSize: &wrappers.UInt32Value{Value: uint32(InitialDownstreamHTTP2ConnectionWindowSize)},
+		},
+		StreamIdleTimeout: durationpb.New(RequestTimeout),
+		RequestTimeout:    durationpb.New(RequestTimeout),
 	}
 
 	pbst, err := anypb.New(manager)

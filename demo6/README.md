@@ -17,9 +17,7 @@ $ envoy --version | grep -o '[0-9].[0-9]\+.[0-9]' | tail -n1
 
 ### How It Works
 
-The `ingress` network is a special overlay network that facilitates load balancing among a service's node. When any swarm node receives a request on a published port, it hands that request off to the `IPVS` module, which keeps track of all the IP addresses participating in that service, selects one of them, and routes the request to it, over the `ingress` network.
-
-The `docker_gwbridge` is a bridge network that connects the overlay networks (including the `ingress` network) to an individual Docker daemon's physical network. By default, each container a service is running is connected to its local Docker daemon host's `docker_gwbridge` network.
+Some [writeup](https://xyxj1024.github.io/posts/a-control-plane-for-containerized-envoy-proxies) for this demo.
 
 ## Run Code
 
@@ -37,7 +35,7 @@ docker service update \
     --label-add envoy.status.node-id=local_node_1 \
     --label-add envoy.listener.port=10000 \
     --label-add envoy.endpoint.port=8080 \
-    --label-add envoy.route.domain=example.com \
+    --label-add envoy.route.path=/ \
     --label-add envoy.route.upstream-host=app-1 \
     envoy-1
 
@@ -46,8 +44,8 @@ docker service update \
     --label-add envoy.status.node-id=local_node_2 \
     --label-add envoy.listener.port=10000 \
     --label-add envoy.endpoint.port=80 \
-    --label-add envoy.route.domain=example.com \
-    --label-add envoy.route.upstream-host=www.wustl.edu \
+    --label-add envoy.route.path=/robots.txt \
+    --label-add envoy.route.upstream-host=www.google.com \
     envoy-2
 ```
 
