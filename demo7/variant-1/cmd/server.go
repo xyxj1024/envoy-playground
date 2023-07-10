@@ -14,16 +14,10 @@ import (
 
 const (
 	protocol = "unix"
-	socket   = "/tmp/uds_path" // Unix Domain Socket path
+	socket   = "/tmp/uds_path" /* Unix Domain Socket path */
 )
 
-// func init() {
-// flag.Int("port", 50051, "The server port")
-// }
-
 func main() {
-	// flag.Parse()
-
 	lis, err := net.Listen(protocol, socket)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)

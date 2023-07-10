@@ -11,7 +11,7 @@ Repo description:
 - Demo 4: gRPC communication with Envoy xDS-based global load balancing
 - Demo 5: Dockerized gRPC communication with Envoy [external authorization](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/ext_authz_filter)
 - Demo 6: Envoy dynamic configuration (multiple Envoy services in a Docker swarm)
-- Demo 7: Envoy [SDS](https://www.envoyproxy.io/docs/envoy/latest/configuration/security/secret) "hello world"
+- Demo 7: [Secret Discovery Service](https://www.envoyproxy.io/docs/envoy/latest/configuration/security/secret) "hello world"
 
 ## Useful Links
 
@@ -21,6 +21,7 @@ Repo description:
 - [Open source projects built on Envoy proxy](https://www.envoyproxy.io/community.html)
 - [Gloo Project](https://github.com/solo-io/gloo/tree/main/projects/gloo)
 - [Jordan Webb](https://jordemort.dev/), "[The container orchestrator landscape](https://lwn.net/Articles/905164/)," August 23, 2022.
+- [Evan Jones](https://github.com/evanj), "[TCP and gRPC Failed Connection Timeouts](https://www.evanjones.ca/tcp-connection-timeouts.html)," August 16, 2021.
 - Christian Posta, "[Guidance for Building a Control Plane to Manage Envoy Proxy at the edge, as a gateway, or in a mesh](https://blog.christianposta.com/envoy/guidance-for-building-a-control-plane-to-manage-envoy-proxy-based-infrastructure/)," February 12, 2019.
 - Viktor Adam, "[Podlike](https://blog.viktoradam.net/2018/05/14/podlike/)," May 14, 2018.
 - Hechao Li, "[Linux Bridge - Part 1](https://hechao.li/2017/12/13/linux-bridge-part1/)," December 13, 2017.

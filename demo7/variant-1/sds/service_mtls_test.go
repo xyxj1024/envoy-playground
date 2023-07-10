@@ -22,7 +22,7 @@ import (
 
 const (
 	basedir     = "/Users/xuanyuanxingjian/Documents/projects/Repos/github-envoy-playground/demo7/variant-1"
-	virtualhost = "example.com"
+	virtualhost = "localhost" // to add custom domains, modify the /etc/hosts file
 	localhost   = "127.0.0.1"
 	port        = ":50051"
 	protocol    = "tcp"
@@ -103,7 +103,7 @@ func TestService_FetchSecrets_MTLS(t *testing.T) {
 }
 
 func loadTLSCredentials() (credentials.TransportCredentials, error) {
-	pemServerCA, err := os.ReadFile(basedir + "/cert/ca-client.crt")
+	pemServerCA, err := os.ReadFile(basedir + "/cert/ca.crt")
 	if err != nil {
 		return nil, err
 	}

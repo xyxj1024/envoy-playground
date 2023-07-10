@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"net"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -17,7 +18,7 @@ func ProvideCluster(clusterName string, upstreamHost string, upstreamPort uint32
 	return &cluster.Cluster{
 		Name:                 clusterName,
 		ConnectTimeout:       durationpb.New(2 * time.Second),
-		ClusterDiscoveryType: &cluster.Cluster_Type{Type: cluster.Cluster_LOGICAL_DNS},
+		ClusterDiscoveryType: getClusterDiscoveryType(upstreamHost),
 		DnsLookupFamily:      cluster.Cluster_V4_ONLY,
 		LbPolicy:             cluster.Cluster_ROUND_ROBIN,
 		LoadAssignment:       makeEndpoint(clusterName, upstreamHost, upstreamPort),
@@ -49,4 +50,20 @@ func makeEndpoint(clusterName string, upstreamHost string, upstreamPort uint32) 
 			}},
 		}},
 	}
+}
+
+/* Function getClusterDiscoveryType:
+ * returns a strict DNS type if the given string is not an IP address;
+ * returns a static type, otherwise.
+ */
+func getClusterDiscoveryType(s string) *cluster.Cluster_Type {
+	isIP := true
+	if net.ParseIP(s) == nil {
+		isIP = false
+	}
+
+	if isIP {
+		return &cluster.Cluster_Type{Type: cluster.Cluster_STATIC}
+	}
+	return &cluster.Cluster_Type{Type: cluster.Cluster_STRICT_DNS}
 }

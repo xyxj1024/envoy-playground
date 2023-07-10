@@ -63,5 +63,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v.Recv(): %v", stream, err)
 	}
-	log.Printf("%v", res)
+
+	log.Printf("DiscoveryResponse:\n%v", res)
 }

@@ -67,14 +67,14 @@ func (s *Service) StreamSecrets(sss secret.SecretDiscoveryService_StreamSecretsS
 		select {
 		case r := <-requestChannel:
 			if r.ErrorDetail != nil {
-				fmt.Printf("failed discovery request, error: %s", err.Error())
+				fmt.Printf("failed discovery request, error: %s\n", err.Error())
 				continue
 			}
 
 			if req != nil {
 				switch {
 				case nonce != r.ResponseNonce:
-					fmt.Printf("invalid responseNonce")
+					fmt.Println("invalid responseNonce")
 					continue
 				case r.VersionInfo == "": // first DiscoveryRequest
 					versionInfo = s.versionInfo()
@@ -94,7 +94,7 @@ func (s *Service) StreamSecrets(sss secret.SecretDiscoveryService_StreamSecretsS
 			}
 
 		case err := <-errorChannel:
-			fmt.Printf("error occurred on channel: %s", err.Error())
+			fmt.Printf("error occurred on channel: %s\n", err.Error())
 			return err
 		case <-s.stopChannel:
 			return nil
@@ -102,12 +102,12 @@ func (s *Service) StreamSecrets(sss secret.SecretDiscoveryService_StreamSecretsS
 
 		res, err := getDiscoveryResponse(req, versionInfo)
 		if err != nil {
-			fmt.Printf("error while creating response: %s", err.Error())
+			fmt.Printf("error while creating response: %s\n", err.Error())
 			return err
 		}
 
 		if err := sss.Send(res); err != nil {
-			fmt.Printf("error sending stream response: %s", err.Error())
+			fmt.Printf("error sending stream response: %s\n", err.Error())
 			return err
 		}
 		fmt.Println("Response sent to the client")
