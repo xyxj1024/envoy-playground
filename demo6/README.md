@@ -28,7 +28,11 @@ Deploy, and then update certain Envoy service(s):
 bash $(pwd)/deploy/scripts/deploy.sh
 
 # Run control plane
-go run envoy-swarm-control --debug
+go build
+
+go run envoy-swarm-control --debug \
+    --xds-port 18000 \
+    --ingress-network mesh-traffic
 
 # Update envoy-1
 docker service update \
@@ -44,8 +48,8 @@ docker service update \
     --label-add envoy.status.node-id=local_node_2 \
     --label-add envoy.listener.port=10000 \
     --label-add envoy.endpoint.port=80 \
-    --label-add envoy.route.path=/robots.txt \
-    --label-add envoy.route.upstream-host=www.google.com \
+    --label-add envoy.route.path=/ \
+    --label-add envoy.route.upstream-host=www.wustl.edu \
     envoy-2
 ```
 
@@ -57,4 +61,13 @@ docker service logs -f envoy-1
 
 # Access envoy-1
 curl -i http://localhost:8001/
+
+# Access envoy-2
+curl -i http://localhost:8002/
+```
+
+To clean up:
+
+```bash
+bash $(pwd)/deploy/scripts/cleanup.sh
 ```

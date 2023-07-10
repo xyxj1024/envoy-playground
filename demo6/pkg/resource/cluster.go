@@ -15,6 +15,14 @@ import (
 func ProvideCluster(clusterName string, upstreamHost string, upstreamPort uint32) *cluster.Cluster {
 	logrus.Infof(">>>>>>>>>>>>>>>>>>> creating cluster with clusterName %s, upstreamHost %s", clusterName, upstreamHost)
 
+	/*
+		uctx := &auth.UpstreamTlsContext{}
+		tctx, err := anypb.New(uctx)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+	*/
+
 	return &cluster.Cluster{
 		Name:                 clusterName,
 		ConnectTimeout:       durationpb.New(2 * time.Second),
@@ -22,6 +30,14 @@ func ProvideCluster(clusterName string, upstreamHost string, upstreamPort uint32
 		DnsLookupFamily:      cluster.Cluster_V4_ONLY,
 		LbPolicy:             cluster.Cluster_ROUND_ROBIN,
 		LoadAssignment:       makeEndpoint(clusterName, upstreamHost, upstreamPort),
+		/*
+			TransportSocket: &core.TransportSocket{
+				Name: "envoy.transport_sockets.tls",
+				ConfigType: &core.TransportSocket_TypedConfig{
+					TypedConfig: tctx,
+				},
+			},
+		*/
 	}
 }
 

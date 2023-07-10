@@ -63,6 +63,26 @@ func ProvideHTTPListener(listenerName, routeConfigName string, listenerPort uint
 		logrus.Fatal(err)
 	}
 
+	/*
+		sdsTls := &auth.DownstreamTlsContext{
+			CommonTlsContext: &auth.CommonTlsContext{
+				TlsCertificates: []*auth.TlsCertificate{{
+					CertificateChain: &core.DataSource{
+						Specifier: &core.DataSource_InlineBytes{InlineBytes: []byte(envoyServerCert)},
+					},
+					PrivateKey: &core.DataSource{
+						Specifier: &core.DataSource_InlineBytes{InlineBytes: []byte(envoyServerKey)},
+					},
+				}},
+			},
+		}
+
+		scfg, err := anypb.New(sdsTls)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+	*/
+
 	return &listener.Listener{
 		Name: listenerName, // e.g., "listener_0"
 		Address: &core.Address{
@@ -83,6 +103,14 @@ func ProvideHTTPListener(listenerName, routeConfigName string, listenerPort uint
 					TypedConfig: pbst,
 				},
 			}},
+			/*
+				TransportSocket: &core.TransportSocket{
+					Name: "envoy.transport_sockets.tls",
+					ConfigType: &core.TransportSocket_TypedConfig{
+						TypedConfig: scfg,
+					},
+				},
+			*/
 		}},
 	}
 }

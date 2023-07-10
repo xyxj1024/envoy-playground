@@ -41,7 +41,7 @@ func main() {
 		log.Fatalf("failed to generate certificates for host: %v", err)
 	}
 	_, clientCrtBytes, _, clientKeyBytes, err := cert.GenServerCert(
-		[]string{"envoy"},
+		[]string{"client"},
 		rootCrt,
 		rootKey,
 		cert.CertValidityMax,

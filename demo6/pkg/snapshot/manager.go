@@ -17,8 +17,8 @@ import (
 )
 
 type Manager struct {
-	snapshotCache               cache.SnapshotCache
-	clusters, listeners, routes []types.Resource
+	snapshotCache                        cache.SnapshotCache
+	clusters, listeners, routes, secrets []types.Resource
 }
 
 func NewManager(config cache.SnapshotCache) *Manager {
@@ -27,6 +27,7 @@ func NewManager(config cache.SnapshotCache) *Manager {
 		clusters:      []types.Resource{},
 		listeners:     []types.Resource{},
 		routes:        []types.Resource{},
+		secrets:       []types.Resource{},
 	}
 }
 
@@ -68,15 +69,18 @@ func (m *Manager) updateConfiguration(update ServiceLabels, ctx context.Context)
 		update.Route.PathPrefix,
 		update.Endpoint.RequestTimeout,
 	)
+	secret := myresource.ProvideSecret()
 
 	m.clusters = append(m.clusters, cluster)
 	m.listeners = append(m.listeners, listener)
 	m.routes = append(m.routes, route)
+	m.secrets = append(m.secrets, secret)
 
-	resources := make(map[string][]types.Resource, 3)
+	resources := make(map[string][]types.Resource, 4)
 	resources[resource.ClusterType] = []types.Resource{cluster}
 	resources[resource.RouteType] = []types.Resource{route}
 	resources[resource.ListenerType] = []types.Resource{listener}
+	resources[resource.SecretType] = []types.Resource{secret}
 
 	snap, _ := cache.NewSnapshot(fmt.Sprint(version), resources)
 	if err := snap.Consistent(); err != nil {
