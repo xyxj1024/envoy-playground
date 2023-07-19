@@ -1,6 +1,8 @@
-package resource
+package configresource
 
 import (
+	util "envoy-swarm-control/pkg/utils"
+
 	"github.com/sirupsen/logrus"
 
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -19,7 +21,8 @@ var (
 
 func ProvideSecret() *auth.Secret {
 	logrus.Infof(">>>>>>>>>>>>>>>>>>> creating secret with secretName " + secretName)
-	return &auth.Secret{
+
+	s := &auth.Secret{
 		Name: secretName,
 		Type: &auth.Secret_TlsCertificate{
 			TlsCertificate: &auth.TlsCertificate{
@@ -31,5 +34,11 @@ func ProvideSecret() *auth.Secret {
 				},
 			},
 		},
+	}
+
+	if util.CheckFilesExist([]string{envoyServerCert, envoyServerKey}) == nil {
+		return s
+	} else {
+		return nil
 	}
 }

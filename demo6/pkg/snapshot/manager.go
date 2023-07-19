@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"time"
 
-	myresource "envoy-swarm-control/pkg/resource"
+	"envoy-swarm-control/pkg/configresource"
 
 	"github.com/sirupsen/logrus"
 
@@ -51,17 +51,17 @@ func (m *Manager) updateConfiguration(update ServiceLabels, ctx context.Context)
 	version := time.Now().Format(time.RFC3339) // timestamp as version number
 	logrus.Infof(">>>>>>>>>>>>>>>>>>> creating snapshot " + fmt.Sprint(version) + " for nodeID " + fmt.Sprint(update.Status.NodeID))
 
-	cluster := myresource.ProvideCluster(
+	cluster := configresource.ProvideCluster(
 		fmt.Sprintf("%s_cluster", update.Status.NodeID),
 		update.Route.UpstreamHost,
 		update.Endpoint.Port.PortValue,
 	)
-	listener := myresource.ProvideHTTPListener(
+	listener := configresource.ProvideHTTPListener(
 		fmt.Sprintf("%s_listener", update.Status.NodeID),
 		fmt.Sprintf("%s_route", update.Status.NodeID),
 		update.Listener.Port.PortValue,
 	)
-	route := myresource.ProvideRoute(
+	route := configresource.ProvideRoute(
 		fmt.Sprintf("%s_route", update.Status.NodeID),
 		fmt.Sprintf("%s_service", update.Status.NodeID),
 		fmt.Sprintf("%s_cluster", update.Status.NodeID),
@@ -69,12 +69,13 @@ func (m *Manager) updateConfiguration(update ServiceLabels, ctx context.Context)
 		update.Route.PathPrefix,
 		update.Endpoint.RequestTimeout,
 	)
-	secret := myresource.ProvideSecret()
-
+	secret := configresource.ProvideSecret()
+	if secret != nil {
+		m.secrets = append(m.secrets, secret)
+	}
 	m.clusters = append(m.clusters, cluster)
 	m.listeners = append(m.listeners, listener)
 	m.routes = append(m.routes, route)
-	m.secrets = append(m.secrets, secret)
 
 	resources := make(map[string][]types.Resource, 4)
 	resources[resource.ClusterType] = []types.Resource{cluster}

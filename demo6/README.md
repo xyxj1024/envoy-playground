@@ -6,10 +6,13 @@
 
 ```bash
 $ set | grep "MACHTYPE"
-MACHTYPE=x86_64-apple-darwin21
+MACHTYPE=x86_64-apple-darwin22
+
+$ docker version --format '{{.Server.Version}}'
+24.0.2
 
 $ go version
-go version go1.20.5 darwin/amd64
+go version go1.20.6 darwin/amd64
 
 $ envoy --version | grep -o '[0-9].[0-9]\+.[0-9]' | tail -n1
 1.26.2
@@ -17,17 +20,19 @@ $ envoy --version | grep -o '[0-9].[0-9]\+.[0-9]' | tail -n1
 
 ### How It Works
 
-Some [writeup](https://xyxj1024.github.io/posts/a-control-plane-for-containerized-envoy-proxies) for this demo.
+The control plane instance runs on the manager node of a Docker swarm cluster.
+
+Some [writeup](https://xyxj1024.github.io/blog/a-control-plane-for-containerized-envoy-proxies) for this demo.
 
 ## Run Code
 
-Deploy, and then update certain Envoy service(s):
+Deploy, and then update selected Envoy service(s):
 
 ```bash
-# Create overlay network and Envoy instances
+# Create overlay network and attached swarm services
 bash $(pwd)/deploy/scripts/deploy.sh
 
-# Run control plane
+# Build and run control plane
 go build
 
 go run envoy-swarm-control --debug \
@@ -53,7 +58,7 @@ docker service update \
     envoy-2
 ```
 
-For example, let's take a look at the state of `envoy-1`:
+Let's take a look at how our example Envoy instances function:
 
 ```bash
 # Check Envoy logs
@@ -65,6 +70,10 @@ curl -i http://localhost:8001/
 # Access envoy-2
 curl -i http://localhost:8002/
 ```
+
+Results:
+
+![screenshot](images/screenshot.png)
 
 To clean up:
 

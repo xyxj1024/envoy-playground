@@ -10,6 +10,10 @@ DOCKER_NETWORK_ID=$(docker network create --driver=overlay --attachable $DOCKER_
 ENVOY_SERVICE_1_NAME="envoy-1" && ENVOY_SERVICE_2_NAME="envoy-2"
 ENVOY_IMAGE_1_NAME="envoy-1:v1" && ENVOY_IMAGE_2_NAME="envoy-2:v1"
 
+# For each Envoy service, we might want three sets of port publishing rules:
+# 1. administration server port
+# 2. static listener port
+# 3. xDS port for gRPC streaming
 docker image build --tag $ENVOY_IMAGE_1_NAME $DEMO_BASEDIR/deploy/envoy/envoy-1
 docker service create \
     --publish 9001:9001 \
